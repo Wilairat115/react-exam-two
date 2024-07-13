@@ -1,0 +1,35 @@
+.container-center{
+    display: flex;
+    justify-content: space-evenly;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-top: 70px;
+}
+
+.box-command{
+    margin-top: 3cap;
+    margin-bottom: 8px;
+}
+
+.TextField-input input{
+    color: gray;
+}
+
+.box-button{
+    display: flex;
+    justify-content: end;
+}
+
+.box-grid{
+    margin-top: 55px;
+}
+
+.grids{
+    width: 40;
+    height: 40;
+    border: "1px solid black";
+    display: "inline-block";
+    box-sizing: "border-box";
+}
+
+
