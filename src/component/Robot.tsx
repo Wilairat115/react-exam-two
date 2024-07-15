@@ -1,165 +1,135 @@
 import { Box, Button, Container, TextField } from "@mui/material";
-import React, { useState } from "react";
-import "./Home.css";
-
-type Direction = 'N' | 'E' | 'S' | 'W';
-
-const initialDirection: Direction = 'N';
-const directions: Direction[] = ['N', 'E', 'S', 'W'];
+import { useRef, useState } from "react";
+import "./Robot.css";
 
 function RobotPage() {
-  const startPosition = { x: 4, y: 4 };
-  const [robotPosition, setRobotPosition] = useState(startPosition);
-  const [direction, setDirection] = useState<Direction>(initialDirection);
-  const [commands, setCommands] = useState<string>("");
-  const [path, setPath] = useState<{ x: number, y: number }[]>([]);
-  const [isCalculated, setIsCalculated] = useState(false);
+  const commandRef = useRef<HTMLInputElement>(null);
+  const [current, setCurrent] = useState<number[][]>([]);
+  const [newGrid, setNewGrid] = useState<number[][]>([]);
 
-  const moveRobot = (commandString: string) => {
-    let x = robotPosition.x;
-    let y = robotPosition.y;
-    let currentDirection = direction;
-    const newPath = [{ x, y }];
-
-    const moveForward = () => {
-      switch (currentDirection) {
-        case 'N':
-          y = y > 0 ? y - 1 : y;
-          break;
-        case 'E':
-          x = x < 8 ? x + 1 : x;
-          break;
-        case 'S':
-          y = y < 8 ? y + 1 : y;
-          break;
-        case 'W':
-          x = x > 0 ? x - 1 : x;
-          break;
-      }
-      newPath.push({ x, y });
-    };
-
-    for (const command of commandString) {
-      switch (command) {
-        case 'L':
-          currentDirection = directions[(directions.indexOf(currentDirection) + 3) % 4];
-          break;
-        case 'R':
-          currentDirection = directions[(directions.indexOf(currentDirection) + 1) % 4];
-          break;
-        case 'W':
-          moveForward();
-          break;
-      }
-    }
-
-    setRobotPosition({ x, y });
-    setDirection(currentDirection);
-    setPath(newPath);
-  };
-
-  const handleCommandChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setCommands(event.target.value);
-  };
-
-  const handleCalculateClick = () => {
-    if (commands.trim() === "") {
-      // If commands are empty, reset everything to initial state
-      setRobotPosition(startPosition);
-      setDirection(initialDirection);
-      setPath([]);
-      setIsCalculated(false);
+  const checkInput = () => {
+    const commands = commandRef.current?.value || "";
+    if (commands !== "") {
+      CalculateClick(commands);
     } else {
-      // Otherwise, proceed with calculating the robot's movement
-      setIsCalculated(true);
-      moveRobot(commands);
+      setCurrent([]);
+      setNewGrid([]);
     }
   };
 
-  const createGrid = () => {
-    const rows = [];
-    for (let i = 0; i < 9; i++) {
-      const columns = [];
-      for (let j = 0; j < 9; j++) {
-        let cellColor = "#ffffff"; // สีเริ่มต้นของเซลล์
+  const CalculateClick = (commands: string) => {
+    let turn = 0; //หัว Robot
+    const path: number[][] = [[0, 0]]; //เก็บการเดินตั้งแต่ต้นจนจบ
+    const currentPosition: number[][] = [[0, 0]]; //เก็บตำแหน่งปัจจุบัน
+    const turnPattern: [number, number][] = [[0, 1],[-1, 0],[0, -1],[1, 0],]; //การเดินตามแนวแกน X,Y
+    const walkingLine: [number, number][] = [[-1, 0],[0, -1],[1, 0],[0, 1],]; //การเดินตามทิศทาง
 
-        // มาร์คจุดเริ่มต้นเป็นสีเขียวเสมอ
-        if (i === startPosition.y && j === startPosition.x) {
-          cellColor = "#8AAF73"; // สีเขียวสำหรับจุดเริ่มต้น
-        }
+    for (const com of commands) {
+      const position = path[path.length - 1];
+      const position_cur = currentPosition[currentPosition.length - 1];
 
-        // มาร์คตำแหน่งที่หุ่นยนต์เดินผ่านเป็นสีเทา
-        else if (path.some(pos => pos.x === j && pos.y === i)) {
-          cellColor = "#D3D3D3"; // สีเทาสำหรับตำแหน่งที่เดินผ่าน
-        }
-
-        // มาร์คตำแหน่งสุดท้ายของหุ่นยนต์เป็นสีแดง ก็ต่อเมื่อมีการกดปุ่มคำนวณแล้ว
-        if (isCalculated && i === robotPosition.y && j === robotPosition.x) {
-          cellColor = "#FF0000"; // สีแดงสำหรับตำแหน่งสุดท้าย
-        }
-
-        columns.push(
-          <Box
-            key={`${i}-${j}`}
-            sx={{
-              width: 40,
-              height: 40,
-              border: "1px solid gray",
-              backgroundColor: cellColor, // กำหนดสีพื้นหลังของเซลล์
-              display: "inline-block",
-              boxSizing: "border-box",
-            }}
-          ></Box>
-        );
-      }
-      rows.push(
-        <Box key={i} sx={{ display: "flex" }}>
-          {columns}
-        </Box>
-      );
+      if (com === "L" || com === "l") {
+        turn = (turn + 1) % 4;
+      } else if (com === "R" || com === "r") {
+        turn = (turn - 1 + 4) % 4;
+      } else if (com === "W" || com === "w") {
+        path.push([position[0] + walkingLine[turn][0], position[1] + walkingLine[turn][1]]);
+        currentPosition.push([position_cur[0] + turnPattern[turn][0], position_cur[1] + turnPattern[turn][1]]); 
+      }else{continue;}
     }
-    return rows;
+
+    // console.log(currentPosition);
+    setCurrent(currentPosition);
+
+    const box = calculateBox(path);
+    const centerIndex = Math.floor(box / 2);
+
+    const grid = Array.from({ length: box }, () => Array(box).fill(0));
+    path.forEach(([x, y], index) => {
+      const gridX = x + centerIndex;
+      const gridY = y + centerIndex;
+      if (index === path.length - 1) {
+        grid[gridX][gridY] = 3;
+      } else {
+        grid[gridX][gridY] = 1;
+      }
+    });
+    grid[centerIndex][centerIndex] = 2;
+
+    // console.log(grid);
+    setNewGrid(grid);
+  };
+
+  const calculateBox = (distance: number[][]) => Math.max(...distance.flat().map(Math.abs)) * 2 + 1;
+
+  const CalculateBoxSize = () => {
+    const size = newGrid.length;
+    if (size > 10) {
+      const calculatedSize = 35 - (size - 5);
+      return `${calculatedSize < 15 ? 15 : calculatedSize}px`;
+    } else {
+      return "40px";
+    }
   };
 
   return (
     <Container>
       <Box className="container-center">
-        <Box>
-          <span>Robot Walk</span>
-          <Box className="box-command">
-            <span>&nbsp;คำสั่ง Robot Walk</span>
+        <Box className="container-input">
+          <Box className="Box-input">
+            <span>Robot Walk</span>
+            <Box className="box-command">
+              <span>&nbsp;คำสั่ง Robot Walk</span>
+            </Box>
+            <Box sx={{ width: 450 }}>
+              <TextField
+                className="TextField-input"
+                fullWidth
+                id="fullWidth"
+                inputRef={commandRef}
+              />
+            </Box>
+            <Box className="box-button">
+              <Button
+                  sx={{bgcolor: "#97B3C7",
+                  color: "black",
+                  mt: 4, width: 125,
+                  height: 50,
+                  borderRadius: "15px",
+                  "&:hover": { bgcolor: "#6C93B0" },
+                }}
+                onClick={checkInput}
+              >
+                <span className="prompt-extralight">คำนวณ</span>
+              </Button>
+            </Box>
           </Box>
-          <Box sx={{ width: 450 }}>
-            <TextField 
-              className="TextField-input" 
-              fullWidth 
-              id="fullWidth" 
-              value={commands}
-              onChange={handleCommandChange}
-            />
-          </Box>
-          <Box className="box-button">
-            <Button
-              sx={{
-                bgcolor: "#97B3C7",
-                color: "black",
-                mt: 4,
-                width: 125,
-                height: 50,
-                borderRadius: "15px",
-                "&:hover": { bgcolor: "#6C93B0" },
-              }}
-              onClick={handleCalculateClick}
-            >
-              <span>คำนวณ</span>
-            </Button>
-          </Box>
+          <hr className="responsive-hr" />
         </Box>
         <Box className="box-grid">
-          <Box sx={{ mb: 2 }}>
-            <span>ตำแหน่งปัจจุบัน ({robotPosition.x},{robotPosition.y})</span>
+          {current.length <= 0 ? null : (
+            <Box sx={{ mb: 2 }}>
+              <span>ตำแหน่งปัจจุบัน ( {current[current.length - 1][0]} , {current[current.length - 1][1]} )</span>
+            </Box>
+          )}
+          <Box>
+            {newGrid.map((row, rowIndex) => (
+              <Box key={rowIndex} style={{ display: "flex" }}>
+                {row.map((cell, cellIndex) => {
+                  return (
+                    <Box
+                      key={cellIndex}
+                      style={{
+                        width: CalculateBoxSize(),
+                        height: CalculateBoxSize(),
+                        border: "1px solid lightgray",
+                        backgroundColor: cell === 1 ? "#C4C4C4" : cell === 2 ? "#8AAF73" : cell === 3 ? "#CB8A8A" : "white",}}
+                    ></Box>
+                  );
+                })}
+              </Box>
+            ))}
           </Box>
-          <Box>{createGrid()}</Box>
         </Box>
       </Box>
     </Container>

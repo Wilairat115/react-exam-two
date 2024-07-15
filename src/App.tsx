@@ -1,11 +1,11 @@
-import Robot2Page from "./component/Robot2"
+import RobotPage from "./component/Robot";
 
-// import './App.css'
 function App() {
   return (
-    // <HomePage/>
-    <Robot2Page/>
-  )
+    <>
+      <RobotPage />;
+    </>
+  );
 }
 
-export default App
+export default App;
